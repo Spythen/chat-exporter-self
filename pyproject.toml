@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chat-exporter-self"
+version = "1.0.0"
+description = "Universal Discord chat exporter supporting servers, DMs, and group chats (GCs), designed for selfbot use."
+readme = "README.md"
+authors = [
+    { name = "Spythen" }
+]
+requires-python = ">=3.8"
+license = { text = "GPL-3.0-only" }
+
+classifiers = [
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Typing :: Typed"
+]
+
+dependencies = [
+    "aiohttp",
+    "pytz",
+    "grapheme",
+    "emoji",
+    "jinja2"
+]
+
+keywords = [
+    "chat exporter",
+    "discord exporter",
+    "discord chat exporter",
+    "discord",
+    "selfbot",
+    "dm exporter",
+    "gc exporter"
+]
+
+[project.urls]
+Homepage = "https://github.com/Spythen/chat-exporter-self"
+Repository = "https://github.com/Spythen/chat-exporter-self"
