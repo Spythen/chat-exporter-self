@@ -1,22 +1,46 @@
 # chat-exporter-self
 
-Universal Discord chat exporter supporting servers, DMs, and group chats (GCs).
+A universal Discord chat exporter built for **selfbot usage**, supporting servers, DMs, and group chats.
 
-## Install
+## 🚀 Installation
 
+```bash
 pip install git+https://github.com/Spythen/chat-exporter-self.git
+```
 
-## Notes
-- Works everywhere (servers, DMs, GCs)
-- Designed for selfbot usage
-- ⚠️ NOTE: This exporter doesn't support Discord component embeds yet.
+## 🔌 Compatibility
 
-## ⭐ Credits
+Designed specifically for selfbot environments and works seamlessly with  
+[discord.py-self](https://github.com/dolfies/discord.py-self)
 
-This project is a fork of [DiscordChatExporterPy](https://github.com/mahtoid/DiscordChatExporterPy), originally developed by mahtoid.
+## ✨ Features
 
-This repository modifies and extends the original implementation to support:
-- DMs, and Group Chats (GCs)
-- Selfbot usage
+- Export chats from:
+  - Servers
+  - Direct Messages (DMs)
+  - Group Chats (GCs)
+- Works seamlessly with selfbots
+- Extended compatibility beyond the original implementation
+- Lightweight and easy to integrate
 
-The original project and its contributors deserve full credit for the core functionality.
+## ⚠️ Limitations
+
+- Discord component embeds are **not supported yet**
+
+## 📌 About This Fork
+
+This project is based on  
+[DiscordChatExporterPy](https://github.com/mahtoid/DiscordChatExporterPy) by mahtoid.
+
+This fork introduces several improvements and fixes, including:
+- Added support for DMs and Group Chats
+- Adapted for selfbot environments
+- Various bug fixes and enhancements
+
+While the core foundation comes from the original project, this version expands its usability significantly.
+
+## 🙌 Credits
+
+- Original project: **mahtoid**
+- Fork & enhancements: **Spythen (DC: therealvelocity)**
+- AI
