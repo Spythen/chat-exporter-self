@@ -135,8 +135,8 @@ class Component:
         return Attachment.resolve_file_icon(file_name, content_type, media_url)
 
     async def build_component(self, c):
-        # Check for component type attribute
-        component_type = getattr(c, 'type', None)
+        # Check for component type attribute using self._get_attr for dict/object support
+        component_type = self._get_attr(c, 'type', None)
         
         # Handle legacy components (v1)
         if isinstance(c, discord.Button):
@@ -146,11 +146,20 @@ class Component:
             Component.menu_div_id += 1
             return menu_html
         
-        # Handle components v2 based on type
+        # Handle components based on type (supports both dict and objects)
         if component_type is None:
             return ""
         
-        type_value = component_type.value if hasattr(component_type, 'value') else component_type
+        # Extract numerical value from Enum or dict
+        if hasattr(component_type, 'value'):
+            type_value = component_type.value
+        elif isinstance(component_type, dict):
+            type_value = component_type.get('value', component_type)
+        else:
+            try:
+                type_value = int(component_type)
+            except (TypeError, ValueError):
+                type_value = component_type
         
         # ActionRow (type 1) - contains buttons/selects
         if type_value == 1:
@@ -186,6 +195,7 @@ class Component:
             return await self.build_container(c)
         
         return ""
+
 
     async def build_action_row(self, c):
         """Build an action row containing buttons or select menus"""
@@ -311,9 +321,9 @@ class Component:
 
     async def build_container(self, c):
         """Build a container component (like an embed)"""
-        accent_color = getattr(c, 'accent_color', None) or getattr(c, 'accent_colour', None)
-        spoiler = getattr(c, 'spoiler', False)
-        components = getattr(c, 'components', []) or getattr(c, 'children', [])
+        accent_color = self._get_attr(c, 'accent_color', None) or self._get_attr(c, 'accent_colour', None)
+        spoiler = self._get_attr(c, 'spoiler', False)
+        components = self._get_attr(c, 'components', []) or self._get_attr(c, 'children', [])
         
         # Build nested components
         content_html = ""
@@ -358,8 +368,8 @@ class Component:
 
     async def build_section(self, c):
         """Build a section component with content and accessory"""
-        components = getattr(c, 'components', []) or getattr(c, 'children', [])
-        accessory = getattr(c, 'accessory', None)
+        components = self._get_attr(c, 'components', []) or self._get_attr(c, 'children', [])
+        accessory = self._get_attr(c, 'accessory', None)
         has_accessory = accessory is not None
         
         # Build content (text displays)
@@ -382,7 +392,7 @@ class Component:
 
     async def build_text_display(self, c):
         """Build a text display component"""
-        content = getattr(c, 'content', '')
+        content = self._get_attr(c, 'content', '')
         
         return await fill_out(self.guild, component_text_display, [
             ("CONTENT", str(content), PARSE_MODE_EMBED),
@@ -429,7 +439,7 @@ class Component:
 
     async def build_media_gallery(self, c):
         """Build a media gallery component"""
-        items = getattr(c, 'items', []) or getattr(c, 'components', []) or getattr(c, 'children', [])
+        items = self._get_attr(c, 'items', []) or self._get_attr(c, 'components', []) or self._get_attr(c, 'children', [])
         
         items_html = ""
         for item in items:

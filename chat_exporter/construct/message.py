@@ -1,5 +1,6 @@
 import html
 import io
+import re
 import traceback
 from typing import List, Optional, Union
 
@@ -202,25 +203,24 @@ class MessageConstruct:
             ]
 
     async def build_content(self):
-        if not self.message.content and not self.get_message_snapshots():
-            self.message.content = ""
-            return
-
         if self.message_edited_at:
             self.message_edited_at = _set_edit_at(self.message_edited_at)
 
         snapshots = self.get_message_snapshots()
         if snapshots:
-            combined = f"{self.message.content} {' '.join(s.content for s in snapshots if hasattr(s, 'content'))}"
+            snapshot_content = []
+            for s in snapshots:
+                if hasattr(s, 'content') and s.content:
+                    snapshot_content.append(f'<div class="chatlog__markdown-preserve">{html.escape(s.content)}</div>')
+            
+            combined = html.escape(self.message.content or "")
+            if snapshot_content:
+                combined += f'<div class="chatlog__forwarded-snapshot">{"".join(snapshot_content)}</div>'
             self.forwarded = True
         else:
-            combined = self.message.content
+            combined = html.escape(self.message.content or "")
 
-        combined = html.escape(combined or "")
-
-        if self.forwarded:
-            combined = f'<div class="quote">{combined}</div>'
-
+        # Ensure content is at least an empty string to avoid rendering issues
         self.message.content = await fill_out(self.guild, message_content, [
             ("MESSAGE_CONTENT", combined, PARSE_MODE_MARKDOWN),
             ("EDIT", self.message_edited_at, PARSE_MODE_NONE),
@@ -239,7 +239,9 @@ class MessageConstruct:
             except Exception:
                 self.message.reference = ""
                 if self.forwarded:
-                    self.message.reference = message_reference_forwarded
+                    self.message.reference = await fill_out(self.guild, message_reference_forwarded, [
+                        ("FORWARD_ICON", DiscordUtils.forward_icon, PARSE_MODE_NONE),
+                    ])
                     return
                 self.message.reference = message_reference_unknown
                 return
@@ -309,7 +311,7 @@ class MessageConstruct:
             ("BOT_TAG", is_bot, PARSE_MODE_NONE),
             ("NAME_TAG", await discriminator(user.name, user.discriminator), PARSE_MODE_NONE),
             ("NAME", str(html.escape(user.display_name))),
-            ("COMMAND", str(command), PARSE_MODE_NONE),
+            ("COMMAND", re.sub(r'\/([a-zA-Z]+)\d+', r'/\1', str(command)), PARSE_MODE_NONE),
             ("USER_COLOUR", user_colour, PARSE_MODE_NONE),
             ("FILLER", "used ", PARSE_MODE_NONE),
             ("USER_ID", str(user.id), PARSE_MODE_NONE),
@@ -350,6 +352,22 @@ class MessageConstruct:
             ("ATTACH_URL_THUMB", str(sticker_image_url), PARSE_MODE_NONE)
         ], bot=self.bot)
 
+    async def _fetch_raw_message_data(self):
+        if not self.bot or not hasattr(self.bot, "http") or not getattr(self.bot.http, "token", None):
+            return None
+        token = self.bot.http.token
+        url = f"https://discord.com/api/v10/channels/{self.message.channel.id}/messages/{self.message.id}"
+        headers = {"Authorization": f"{token}"}
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, timeout=5) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+        except Exception:
+            pass
+        return None
+
     async def build_assets(self):
         processed_attachments = []
         attachment_urls = set()
@@ -358,7 +376,9 @@ class MessageConstruct:
             if hasattr(snapshot, "embeds"):
                 for se in snapshot.embeds:
                     self.embeds += await Embed(se, self.guild).flow()
-                    self.message.reference = message_reference_forwarded
+                    self.message.reference = await fill_out(self.guild, message_reference_forwarded, [
+                        ("FORWARD_ICON", DiscordUtils.forward_icon, PARSE_MODE_NONE),
+                    ])
 
         for a in self.message.attachments:
             if self.attachment_handler and isinstance(self.attachment_handler, AttachmentHandler):
@@ -382,8 +402,16 @@ class MessageConstruct:
                     self.attachments += await Attachment(sa,self.guild).flow()
                     self.message.reference = message_reference_forwarded
 
-        for c in self.message.components:
-            self.components += await Component(c, self.guild, self.message.attachments).flow()
+        # DEEP FETCH FALLBACK for V2 Components missing from library object
+        components = self.message.components
+        if not components:
+            raw_data = await self._fetch_raw_message_data()
+            if raw_data and "components" in raw_data:
+                components = raw_data["components"]
+
+        if components:
+            for c in components:
+                self.components += await Component(c, self.guild, self.message.attachments).flow()
 
         for snapshot in self.get_message_snapshots():
             if hasattr(snapshot, "components"):
@@ -540,9 +568,17 @@ class MessageConstruct:
         except Exception:
             return author
 
-    async def _gather_user_colour(self, author: discord.Member):
+    async def _gather_user_colour(self, author: Union[discord.Member, discord.User]):
         member = await self._gather_member(author)
-        user_colour = member.colour if member and str(member.colour) != "#000000" else "#FFFFFF"
+        
+        # In DMs, member might be a User object which doesn't have .colour (use .accent_color or default)
+        user_colour = "#FFFFFF"
+        if member:
+            if hasattr(member, "colour") and str(member.colour) != "#000000":
+                user_colour = member.colour
+            elif hasattr(member, "accent_color") and member.accent_color:
+                user_colour = member.accent_color
+        
         return f"color: {user_colour};"
 
     async def _gather_user_icon(self, author: discord.Member):

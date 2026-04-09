@@ -45,15 +45,15 @@ class ParseMention:
     ESCAPE_AMP = "______amp______"
 
     def __init__(self, content, guild, bot=None):
-        self.content = content
+        self.content = str(content if content is not None else "")
         self.guild = guild
         self.bot = bot
         self.code_blocks_content = []
 
     async def flow(self):
-        markdown = ParseMarkdown(self.content)
-        markdown.parse_code_block_markdown()
-        self.content = markdown.content
+        # As requested: Replace backticks with nothing before processing
+        self.content = self.content.replace("`", "")
+        
         await self.escape_mentions()
         await self.escape_mentions()
         await self.unescape_mentions()
@@ -62,9 +62,7 @@ class ParseMention:
         await self.role_mention()
         await self.time_mention()
         await self.slash_command_mention()
-        markdown.content = self.content
-        markdown.reverse_code_block_markdown()
-        self.content = markdown.content
+        
         return self.content
 
 
@@ -90,21 +88,25 @@ class ParseMention:
         pass
 
     async def channel_mention(self):
-        if self.guild is None:
-            return
-
         holder = self.REGEX_CHANNELS, self.REGEX_CHANNELS_2
         for regex in holder:
             match = re.search(regex, self.content)
             while match is not None:
                 channel_id = int(match.group(1))
-                channel = self.guild.get_channel(channel_id)
+                channel = None
+
+                if self.guild:
+                    channel = self.guild.get_channel(channel_id)
+                
+                if not channel and self.bot:
+                    channel = self.bot.get_channel(channel_id)
 
                 if channel is None:
                     replacement = '#deleted-channel'
                 else:
+                    name = getattr(channel, "name", None) or getattr(channel, "display_name", str(channel_id))
                     replacement = '<span class="mention" title="%s">#%s</span>' \
-                                  % (channel.id, channel.name)
+                                  % (channel.id, name)
                 self.content = self.content.replace(self.content[match.start():match.end()], replacement)
 
                 match = re.search(regex, self.content)
@@ -170,7 +172,9 @@ class ParseMention:
                         member = self.bot.get_user(member_id)
                     
                     if member:
-                        member_name = member.display_name
+                        member_name = getattr(member, "display_name", None) or \
+                                      getattr(member, "global_name", None) or \
+                                      getattr(member, "name", str(member_id))
                     else:
                         member_name = None
                 except AttributeError:

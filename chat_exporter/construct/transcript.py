@@ -78,7 +78,7 @@ class TranscriptDAO:
             guild_icon = self.channel.guild.icon if (
                     self.channel.guild.icon and len(self.channel.guild.icon) > 2
             ) else DiscordUtils.default_avatar
-            guild_name = html.escape(self.channel.guild.name)
+            guild_name = html.escape(str(self.channel.guild.name or "Unknown Server"))
             guild_id = str(self.channel.guild.id)
         else:
             guild_icon = DiscordUtils.default_avatar
@@ -142,7 +142,7 @@ class TranscriptDAO:
         channel_topic_html = ""
         if raw_channel_topic:
             channel_topic_html = await fill_out(self.channel.guild, channel_topic, [
-                ("CHANNEL_TOPIC", html.escape(raw_channel_topic))
+                ("CHANNEL_TOPIC", html.escape(str(raw_channel_topic or "")))
             ], bot=self.bot)
 
         limit = "start"
@@ -191,7 +191,7 @@ class TranscriptDAO:
             ("FANCY_TIME", _fancy_time, PARSE_MODE_NONE),
             ("SD", sd, PARSE_MODE_NONE),
             ("SERVER_NAME_SAFE", f"{guild_name}", PARSE_MODE_HTML_SAFE),
-            ("CHANNEL_NAME_SAFE", f"{html.escape(channel_name)}", PARSE_MODE_HTML_SAFE),
+            ("CHANNEL_NAME_SAFE", f"{html.escape(str(channel_name or 'Unknown Channel'))}", PARSE_MODE_HTML_SAFE),
         ], bot=self.bot)
 
 

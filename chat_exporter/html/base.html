@@ -91,6 +91,16 @@ If you have any issues or suggestions - open an issue on the Github Repository o
             white-space: pre-wrap;
         }
 
+        h1, h2, h3 {
+            font-weight: 700;
+            line-height: 1.375;
+            margin: 16px 0 8px 0;
+        }
+
+        h1 { font-size: 1.45rem; margin-top: 10px; }
+        h2 { font-size: 1.25rem; margin-top: 8px; }
+        h3 { font-size: 1.05rem; margin-top: 6px; }
+
         .markdown {
             max-width: 100%;
             line-height: 1.3;
@@ -99,6 +109,7 @@ If you have any issues or suggestions - open an issue on the Github Repository o
 
         .preserve-whitespace {
             white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
 
         .spoiler {
@@ -159,28 +170,27 @@ If you have any issues or suggestions - open an issue on the Github Repository o
             background-color: rgba(0, 0, 0, 0.9);
         }
 
-        .quote {
-            --quote-bar-color: #4e5058;
-            display: flex;
-            align-items: flex-start;
-            max-width: 90%;
-            margin: 0;
-            padding: 0.05em 0;
-            color: #dbdee1;
-            font-size: 0.95em;
-            line-height: 1.3;
+        h1 a, h2 a, h3 a {
+            color: inherit !important;
+            text-decoration: none !important;
         }
 
-        .quote::before {
-            content: "";
-            display: inline-block;
-            flex-shrink: 0;
-            width: 4px;
-            margin: 0.1em 0.6em 0.1em 0;
-            border-radius: 4px;
-            background: var(--quote-bar-color);
-            align-self: stretch;
+        h1 a:hover, h2 a:hover, h3 a:hover {
+            text-decoration: underline !important;
         }
+
+        .quote {
+            --quote-bar-color: #5865f2; /* MagCord/Discord Blurple */
+            border-left: 4px solid var(--quote-bar-color);
+            padding-left: 0.8em;
+            max-width: 100%;
+            margin: 8px 0;
+            color: #dbdee1;
+            font-size: 0.95em;
+            line-height: 1.375;
+            overflow: hidden;
+        }
+
 
         .pre {
             font-family: "Consolas", "Courier New", Courier, monospace;
@@ -195,6 +205,8 @@ If you have any issues or suggestions - open an issue on the Github Repository o
             padding: 0.5em;
             border: 2px solid;
             border-radius: 5px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
 
         .pre--inline {
@@ -723,7 +735,7 @@ If you have any issues or suggestions - open an issue on the Github Repository o
         .chatlog__components {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 4px;
             margin-top: 4px;
         }
 
@@ -862,12 +874,12 @@ If you have any issues or suggestions - open an issue on the Github Repository o
         }
 
         .markup ul {
-            margin: 4px 0 0 16px;
+            margin: 4px 0 6px 16px;
             margin-block-start: 0;
             margin-block-end: 0;
             padding-inline-start: 0;
             list-style-position: outside;
-            list-style-type: circle;
+            list-style-type: disc;
         }
 
         .markup ul ul {
@@ -883,8 +895,7 @@ If you have any issues or suggestions - open an issue on the Github Repository o
             font-family: inherit;
             font-size: 100%;
             vertical-align: baseline;
-            padding-top: 5px;
-            padding-bottom: 5px;
+            padding: 1px 0;
         }
 
 
@@ -1010,6 +1021,23 @@ If you have any issues or suggestions - open an issue on the Github Repository o
 
         .chatlog__reference-link:hover {
             color: #ffffff;
+        }
+
+        .chatlog__reference-forwarded {
+            color: #b5b6b8;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+
+        .chatlog__forwarded-snapshot {
+            padding: 8px 12px;
+            margin-top: 4px;
+            border-left: 2px solid #4f545c;
+            border-radius: 0 4px 4px 0;
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .chatlog__interaction-link:hover {
@@ -1546,15 +1574,15 @@ If you have any issues or suggestions - open an issue on the Github Repository o
             background-color: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 8px;
-            margin: 8px 0;
-            padding: 12px 14px;
+            margin: 4px 0;
+            padding: 8px 12px;
             width: min(100%, 560px);
             max-width: 560px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             -webkit-flex-direction: column;
-            gap: 8px;
+            gap: 4px;
         }
 
         .chatlog__component-container::before {
@@ -1572,8 +1600,20 @@ If you have any issues or suggestions - open an issue on the Github Repository o
             background: var(--component-accent);
         }
 
+        .chatlog__component-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 6px 0;
+            max-width: 520px;
+            width: fit-content;
+        }
+
         .chatlog__component-container.chatlog__component-container--accent {
             padding-left: 18px;
+            border-left: none; /* Accent bar handled by ::before */
         }
 
         .chatlog__component-container.chatlog__component-spoiler {
@@ -1596,6 +1636,76 @@ If you have any issues or suggestions - open an issue on the Github Repository o
 
         .chatlog__component-container.chatlog__component-spoiler:hover::after {
             opacity: 0;
+        }
+
+        .chatlog__component-section {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .chatlog__component-section--has-accessory {
+            flex-direction: row;
+        }
+
+        .chatlog__component-text-display {
+            flex: 1;
+            font-size: 0.95rem;
+            line-height: 1.35;
+            color: #dbdee1;
+        }
+
+        .chatlog__component-text-display h1,
+        .chatlog__component-text-display h2,
+        .chatlog__component-text-display h3 {
+            margin: 4px 0 2px 0;
+            line-height: 1.25;
+            font-weight: 600;
+        }
+
+        .chatlog__component-text-display h1 { font-size: 1.45rem; margin: 4px 0 2px 0; }
+        .chatlog__component-text-display h2 { font-size: 1.25rem; margin: 3px 0 2px 0; }
+        .chatlog__component-text-display h3 { font-size: 1.05rem; margin: 2px 0 1px 0; }
+
+        .chatlog__component-thumbnail-container {
+            flex-shrink: 0;
+            width: 64px;
+            height: 64px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .chatlog__component-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .chatlog__component-media-gallery {
+            display: grid;
+            gap: 4px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .chatlog__media-gallery-grid {
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        }
+
+        .chatlog__component-separator {
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .chatlog__separator-line {
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .chatlog__separator-large {
+            margin: 16px 0;
         }
 
         .chatlog__component-container.chatlog__component-spoiler:hover > :not(.chatlog__component-spoiler-label) {

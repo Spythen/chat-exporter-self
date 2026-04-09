@@ -16,3 +16,4 @@ class DiscordUtils:
     reference_attachment_icon: str = '<img class="chatlog__reference-icon" src="https://cdn.jsdelivr.net/gh/mahtoid/DiscordUtils@master/discord-attachment.svg">'
     interaction_command_icon: str = '<img class="chatlog__interaction-icon" src="https://cdn.jsdelivr.net/gh/mahtoid/DiscordUtils@master/discord-command.svg">'
     interaction_dropdown_icon: str = '<img class="chatlog__dropdown-icon" src="https://cdn.jsdelivr.net/gh/mahtoid/DiscordUtils@master/discord-dropdown.svg">'
+    forward_icon: str = 'https://cdn.jsdelivr.net/gh/mahtoid/DiscordUtils@master/discord-forward.svg'

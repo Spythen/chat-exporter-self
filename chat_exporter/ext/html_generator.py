@@ -1,6 +1,7 @@
 import html
 import json
 import os
+import re
 
 from chat_exporter.parse.mention import ParseMention
 from chat_exporter.parse.markdown import ParseMarkdown
@@ -24,6 +25,7 @@ async def fill_out(guild, base, replacements, bot=None):
             r = (k, v, PARSE_MODE_MARKDOWN)
 
         k, v, mode = r
+        v = str(v if v is not None else "")
 
         if mode != PARSE_MODE_NONE:
             v = await ParseMention(v, guild, bot=bot).flow()
