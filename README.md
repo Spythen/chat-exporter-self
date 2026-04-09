@@ -9,6 +9,7 @@ pip install git+https://github.com/Spythen/chat-exporter-self.git
 ## Notes
 - Works everywhere (servers, DMs, GCs)
 - Designed for selfbot usage
+- ⚠️ NOTE: This exporter doesn't support Discord component embeds yet.
 
 ## ⭐ Credits
 
