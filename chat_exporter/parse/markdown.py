@@ -79,6 +79,16 @@ class ParseMarkdown:
 
     async def special_emoji_flow(self):
         await self.parse_emoji()
+        # Custom Discord Emojis
+        def replace_custom_emoji(match):
+            animated = match.group(1) == 'a'
+            name = match.group(2)
+            emoji_id = match.group(3)
+            ext = 'gif' if animated else 'png'
+            onerror = ' onerror="this.onerror=null; this.src=this.src.replace(\'.gif\', \'.png\');"' if animated else ''
+            return f'<img class="emoji emoji--small" src="https://cdn.discordapp.com/emojis/{emoji_id}.{ext}?size=64"{onerror} alt=":{name}:" title="{name}">'
+        
+        self.content = re.sub(r"(?:<|&lt;)(a?):([a-zA-Z0-9_]+):([0-9]+)(?:>|&gt;)", replace_custom_emoji, self.content)
         return self.content
 
     def strip_preserve(self):
@@ -329,9 +339,8 @@ class ParseMarkdown:
                 return url.replace("&lt;", "").replace("&gt;", "")
             return url
 
-        content = re.sub("\n", "<br>", self.content)
         lines_output = []
-        for line in content.split("<br>"):
+        for line in self.content.split("\n"):
             words_output = []
             for word in line.split(" "):
                 if "http" not in word:
@@ -383,4 +392,4 @@ class ParseMarkdown:
                     words_output.append(word)
             lines_output.append(" ".join(words_output))
             
-        self.content = "<br>".join(lines_output)
+        self.content = "\n".join(lines_output)
