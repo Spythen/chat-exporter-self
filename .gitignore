@@ -3,6 +3,12 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Local test and preview scripts
+preview/
+generate_mock_transcript.py
+test.py
+transcript-*.html
+
 # C extensions
 *.so
 
