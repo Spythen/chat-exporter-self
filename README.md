@@ -1,6 +1,6 @@
 # chat-exporter-self
 
-A universal Discord chat exporter built for **selfbot usage**, supporting servers, DMs, and group chats.
+A modern Discord chat exporter built for **selfbot environments**, supporting servers, direct messages, and group chats with an improved transcript experience.
 
 ## 🚀 Installation
 
@@ -10,36 +10,93 @@ pip install git+https://github.com/Spythen/chat-exporter-self.git
 
 ## 🔌 Compatibility
 
-Designed specifically for selfbot environments and works seamlessly with  
-[discord.py-self](https://github.com/dolfies/discord.py-self)
+Built specifically for selfbot environments and fully compatible with **discord.py-self**.
 
 ## ✨ Features
 
-- **Selfbot Integration:** Works seamlessly with selfbot environments and supports Direct Messages (DMs) and Group Chats (GCs).
-- **🎨 Multi-Theme Support:** Includes Dark, Light, Ash, and Onyx themes. Persists user selections locally and features an intuitive visual picker (**🎨 Theme: Dropdown**).
-- **📱 Phone-Optimized (Mobile Responsive):** Fully optimized mobile layouts. Puts header controls inline to save screen space, auto-scales replied-to reference messages, and hides heavy text file previews on mobile for a clean layout.
-- **🖼️ Smart Lightbox Image Viewer:** Redesigned media popups:
-  - Left-click to open popups.
-  - PC: Click to zoom, hold-and-drag to pan, and right-click for options.
-  - Mobile: Supports native multi-touch pinch-to-zoom.
-  - Top-right close (`X`) button and native browser **Back button** interception (so pressing Back closes the image instead of closing the browser tab).
-- **📂 Discord-Style Attachment Cards:** Redesigned file downloads with dark rounded container boxes, clean vector file icons, and native Discord-style filename links.
+* 📄 Export chats from:
 
-## ⚠️ Limitations
+  * Servers
+  * Direct Messages (DMs)
+  * Group Chats (GCs)
 
-- Discord component embeds are **not supported yet**
+* 🎨 Modern transcript interface
 
-## 📌 About This Fork
+* 🌈 Built-in theme switcher
 
-This project is based on [DiscordChatExporterPy](https://github.com/mahtoid/DiscordChatExporterPy) by mahtoid.
+  * ☀️ Light
+  * 🌙 Dark
+  * 🌫️ Ash
+  * ⚫ Onyx
 
-This fork introduces several improvements and fixes, including:
-- Added support for DMs and Group Chats
-- Adapted for selfbot environments
-- Modern responsive layout and theme system
-- Various bug fixes and enhancements
+* 📨 Forwarded message support
+
+* 🧩 Discord Components support
+
+  * Buttons
+  * Select Menus
+  * Other interactive components
+
+* ⚡ Lightweight and easy to integrate
+
+* 🔧 Selfbot-focused implementation
+
+* 🚀 Improved performance and stability
+
+## 📌 Improvements Over the Original
+
+This fork extends the original project with several new features and improvements:
+
+* Added Direct Message (DM) support
+* Added Group Chat (GC) support
+* Added forwarded message rendering
+* Added Discord Components rendering
+* Completely redesigned transcript UI
+* Built-in transcript theme switcher
+* Improved compatibility with selfbot libraries
+* Multiple bug fixes and performance improvements
+
+## 📷 Transcript Highlights
+
+* Modern Discord-inspired interface
+* Four built-in themes (Light, Dark, Ash & Onyx)
+* Improved message rendering
+* Forwarded message support
+* Interactive Discord Components rendering
+* Better attachment and embed presentation
+* More accurate Discord-like appearance
 
 ## 🙌 Credits
 
-- Original project: **mahtoid**
-- Fork & enhancements: **Spythen (DC: therealvelocity)**
+This project is based on **DiscordChatExporterPy** by **mahtoid**.
+
+### Original Project
+
+* **mahtoid**
+
+### Fork & Enhancements
+
+* **Spythen** (Discord: `therealvelocity`,`therealvelocity.`)
+
+* **AI**
+
+## ❤️ Support the Project
+
+If you find this project useful and would like to support future development, donations are greatly appreciated but never expected.
+
+**Litecoin (LTC)**
+```text
+ltc1q2p0nxelfq4dzagl9f5j4nr8m6jeyu25t0dkdnl
+```
+
+**Bitcoin (BTC)**
+```text
+bc1q2p0nxelfq4dzagl9f5j4nr8m6jeyu25tt3vft0
+```
+
+**EVM (ETH / BNB / Polygon / Base / Arbitrum / etc.)**
+```text
+0x2523c1BE916097cC678AcB1DeDBcAecC448C26d5
+```
+
+Thank you for supporting the project! ❤️
