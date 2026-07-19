@@ -425,7 +425,6 @@ class MessageConstruct:
         # Use the components preserved by our monkey-patch in discord_import.py
         components = self.message.components
         if components:
-            print(f"DEBUG {self.message.id} components: {components}")
             for c in components:
                 self.components += await Component(c, self.guild, self.message.attachments).flow()
 
