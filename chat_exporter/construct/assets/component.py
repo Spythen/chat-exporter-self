@@ -202,7 +202,7 @@ class Component:
         result = ""
         items_html = ""
         
-        children = getattr(c, 'children', []) or getattr(c, 'components', [])
+        children = self._get_attr(c, 'children', []) or self._get_attr(c, 'components', [])
         for child in children:
             child_html = await self.build_component(child)
             if child_html:
@@ -564,7 +564,7 @@ class Component:
             self.components += component_html
         else:
             # Fallback to legacy flow for action rows with children
-            children = getattr(self.component, 'children', []) or getattr(self.component, 'components', [])
+            children = self._get_attr(self.component, 'children', []) or self._get_attr(self.component, 'components', [])
             for c in children:
                 child_html = await self.build_component(c)
                 if child_html:
