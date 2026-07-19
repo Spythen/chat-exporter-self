@@ -392,7 +392,7 @@ class MessageConstruct:
         for snapshot in self.get_message_snapshots():
             if hasattr(snapshot, "embeds"):
                 for se in snapshot.embeds:
-                    self.embeds += await Embed(se, self.guild).flow()
+                    self.embeds += await Embed(se, self.guild, bot=self.bot).flow()
                     self.message.reference = await fill_out(self.guild, message_reference_forwarded, [
                         ("FORWARD_ICON", DiscordUtils.forward_icon, PARSE_MODE_NONE),
                     ])
@@ -406,7 +406,7 @@ class MessageConstruct:
         for e in self.message.embeds:
             if self._is_duplicate_image_embed(e, attachment_urls):
                 continue
-            self.embeds += await Embed(e, self.guild, self.pytz_timezone, self.military_time).flow()
+            self.embeds += await Embed(e, self.guild, self.pytz_timezone, self.military_time, self.bot).flow()
 
         for a in processed_attachments:
             self.attachments += await Attachment(a, self.guild).flow()

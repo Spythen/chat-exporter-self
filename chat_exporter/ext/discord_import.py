@@ -1,4 +1,9 @@
+import sys
 discord_modules = ['discord', 'nextcord', 'disnake', 'magcord']
+loaded_modules = [m for m in discord_modules if m in sys.modules]
+for m in loaded_modules:
+    discord_modules.remove(m)
+discord_modules = loaded_modules + discord_modules
 for module in discord_modules:
     try:
         discord = __import__(module)

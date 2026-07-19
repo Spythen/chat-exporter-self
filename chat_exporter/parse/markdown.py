@@ -44,6 +44,7 @@ class ParseMarkdown:
         self.parse_embed_markdown() # Named links first
         self.https_http_links()    # Raw links second
         self.parse_normal_markdown()
+        self.parse_lists()
 
         await self.parse_emoji()
         self.reverse_code_block_markdown()
@@ -55,6 +56,7 @@ class ParseMarkdown:
         self.https_http_links()
         self.parse_code_block_markdown()
         self.parse_normal_markdown()
+        self.parse_lists()
 
         await self.parse_emoji()
         self.reverse_code_block_markdown()
@@ -67,6 +69,7 @@ class ParseMarkdown:
         self.parse_code_block_markdown(reference=True)
         self.https_http_links()
         self.parse_normal_markdown()
+        self.parse_lists()
 
         await self.parse_emoji()
         self.reverse_code_block_markdown()
@@ -269,6 +272,53 @@ class ParseMarkdown:
         merged = "\n".join(merged_content)
         merged = re.sub(r"</div>[ \t]*\n(?!\n)", "</div>", merged)
         return merged
+
+    def parse_lists(self):
+        lines = self.content.split("\n")
+        parsed_lines = []
+        in_list = False
+        
+        for line in lines:
+            match = re.match(r"^((?:<[^>]+>)*)\s*[\-\*]\s+(.*)$", line)
+            if match:
+                prefix = match.group(1)
+                item_content = match.group(2)
+                
+                suffix = ""
+                end_tags = re.search(r"((?:</[^>]+>)+)$", item_content)
+                if end_tags:
+                    suffix = end_tags.group(1)
+                    item_content = item_content[:-len(suffix)]
+                
+                if not in_list:
+                    parsed_lines.append(f"{prefix}<ul class=\"chatlog__markdown-list\"><li>{item_content}</li>")
+                    in_list = True
+                else:
+                    parsed_lines.append(f"{prefix}<li>{item_content}</li>")
+                
+                if suffix:
+                    parsed_lines[-1] = parsed_lines[-1] + f"</ul>{suffix}"
+                    in_list = False
+            else:
+                if in_list:
+                    if not parsed_lines[-1].endswith("</ul>"):
+                        closing_match = re.match(r"^((?:</[^>]+>)+)(.*)$", line)
+                        if closing_match:
+                            parsed_lines[-1] = parsed_lines[-1] + "</ul>"
+                            parsed_lines.append(line)
+                        else:
+                            parsed_lines.append(f"</ul>{line}")
+                    else:
+                        parsed_lines.append(line)
+                    in_list = False
+                else:
+                    parsed_lines.append(line)
+                    
+        if in_list:
+            if not parsed_lines[-1].endswith("</ul>"):
+                parsed_lines[-1] = parsed_lines[-1] + "</ul>"
+                
+        self.content = "\n".join(parsed_lines)
 
     def https_http_links(self):
         def remove_silent_link(url, raw_url=None):

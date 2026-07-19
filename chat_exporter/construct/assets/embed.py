@@ -46,11 +46,12 @@ class Embed:
 
     check_against = None
 
-    def __init__(self, embed, guild, pytz_timezone=None, military_time=True):
+    def __init__(self, embed, guild, pytz_timezone=None, military_time=True, bot=None):
         self.embed: discord.Embed = embed
         self.guild: discord.Guild = guild
         self.pytz_timezone = pytz_timezone
         self.military_time = military_time
+        self.bot = bot
 
     async def flow(self):
         self.check_against = _gather_checker()
@@ -101,7 +102,7 @@ class Embed:
 
         title_html = await fill_out(self.guild, "{{EMBED_TITLE}}", [
             ("EMBED_TITLE", raw_title, PARSE_MODE_MARKDOWN)
-        ])
+        ], bot=self.bot)
 
         url_value = getattr(self.embed, "url", self.check_against)
         if url_value and url_value != self.check_against:
@@ -110,7 +111,7 @@ class Embed:
 
         self.title = await fill_out(self.guild, embed_title, [
             ("EMBED_TITLE", title_html, PARSE_MODE_NONE)
-        ])
+        ], bot=self.bot)
 
     async def build_description(self):
         self.description = html.escape(self.embed.description) if self.embed.description != self.check_against else ""
@@ -118,7 +119,7 @@ class Embed:
         if self.description:
             self.description = await fill_out(self.guild, embed_description, [
                 ("EMBED_DESC", self.embed.description, PARSE_MODE_EMBED)
-            ])
+            ], bot=self.bot)
 
     async def build_fields(self):
         self.fields = ""
@@ -135,11 +136,11 @@ class Embed:
                 self.fields += await fill_out(self.guild, embed_field_inline, [
                     ("FIELD_NAME", field.name, PARSE_MODE_SPECIAL_EMBED),
                     ("FIELD_VALUE", field.value, PARSE_MODE_EMBED)
-                ])
+                ], bot=self.bot)
             else:
                 self.fields += await fill_out(self.guild, embed_field, [
                     ("FIELD_NAME", field.name, PARSE_MODE_SPECIAL_EMBED),
-                    ("FIELD_VALUE", field.value, PARSE_MODE_EMBED)])
+                    ("FIELD_VALUE", field.value, PARSE_MODE_EMBED)], bot=self.bot)
 
     async def build_author(self):
         self.author = html.escape(self.embed.author.name) if (
@@ -154,21 +155,21 @@ class Embed:
         author_icon = await fill_out(self.guild, embed_author_icon, [
             ("AUTHOR", self.author, PARSE_MODE_NONE),
             ("AUTHOR_ICON", self.embed.author.icon_url, PARSE_MODE_NONE)
-        ]) if self.embed.author and self.embed.author.icon_url != self.check_against else ""
+        ], bot=self.bot) if self.embed.author and self.embed.author.icon_url != self.check_against else ""
 
         if author_icon == "" and self.author != "":
-            self.author = await fill_out(self.guild, embed_author, [("AUTHOR", self.author, PARSE_MODE_NONE)])
+            self.author = await fill_out(self.guild, embed_author, [("AUTHOR", self.author, PARSE_MODE_NONE)], bot=self.bot)
         else:
             self.author = author_icon
 
     async def build_image(self):
         self.image = await fill_out(self.guild, embed_image, [
             ("EMBED_IMAGE", str(self.embed.image.proxy_url), PARSE_MODE_NONE)
-        ]) if self.embed.image and self.embed.image.url != self.check_against else ""
+        ], bot=self.bot) if self.embed.image and self.embed.image.url != self.check_against else ""
 
     async def build_thumbnail(self):
         self.thumbnail = await fill_out(self.guild, embed_thumbnail, [
-            ("EMBED_THUMBNAIL", str(self.embed.thumbnail.url), PARSE_MODE_NONE)]) \
+            ("EMBED_THUMBNAIL", str(self.embed.thumbnail.url), PARSE_MODE_NONE)], bot=self.bot) \
             if self.embed.thumbnail and self.embed.thumbnail.url != self.check_against else ""
 
     async def build_footer(self):
@@ -194,10 +195,10 @@ class Embed:
             self.footer = await fill_out(self.guild, embed_footer_icon, [
                 ("EMBED_FOOTER", footer_text, PARSE_MODE_NONE),
                 ("EMBED_FOOTER_ICON", footer_icon, PARSE_MODE_NONE)
-            ])
+            ], bot=self.bot)
         else:
             self.footer = await fill_out(self.guild, embed_footer, [
-                ("EMBED_FOOTER", footer_text, PARSE_MODE_NONE)])
+                ("EMBED_FOOTER", footer_text, PARSE_MODE_NONE)], bot=self.bot)
 
     async def build_embed(self):
         self.embed = await fill_out(self.guild, embed_body, [
@@ -211,4 +212,4 @@ class Embed:
             ("EMBED_DESC", self.description, PARSE_MODE_NONE),
             ("EMBED_FIELDS", self.fields, PARSE_MODE_NONE),
             ("EMBED_FOOTER", self.footer, PARSE_MODE_NONE),
-        ])
+        ], bot=self.bot)
