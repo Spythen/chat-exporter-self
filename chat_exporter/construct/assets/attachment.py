@@ -1,4 +1,6 @@
 import math
+import os
+import html
 
 from chat_exporter.ext.discord_utils import DiscordUtils
 from chat_exporter.ext.html_generator import (
@@ -67,16 +69,65 @@ class Attachment:
             ("ATTACH_FILE", str(self.attachments.filename), PARSE_MODE_NONE)
         ])
 
+    async def get_text_preview(self) -> str:
+        filename = str(getattr(self.attachments, "filename", "") or "")
+        ext = os.path.splitext(filename)[1].lower().strip('.')
+        
+        previewable_exts = {
+            "txt", "py", "json", "js", "ts", "html", "css", "md", "ini", "conf",
+            "log", "yaml", "yml", "xml", "c", "cpp", "h", "cs", "java", "sh", "bat", "ps1", "sql"
+        }
+        
+        if ext not in previewable_exts:
+            content_type = str(getattr(self.attachments, "content_type", "") or "")
+            if not ("text" in content_type or "json" in content_type or "javascript" in content_type):
+                return ""
+                
+        try:
+            # Skip massive files to prevent slow rendering
+            if self.attachments.size > 5 * 1024 * 1024:
+                return ""
+                
+            content_bytes = await self.attachments.read()
+            try:
+                content_str = content_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                content_str = content_bytes.decode('latin-1', errors='replace')
+                
+            lines = content_str.splitlines()
+            max_preview_lines = 5
+            preview_lines = lines[:max_preview_lines]
+            preview_text = "\n".join(preview_lines)
+            
+            escaped_text = html.escape(preview_text)
+            
+            remaining_bytes = self.attachments.size - len(preview_text.encode('utf-8'))
+            if len(lines) > max_preview_lines or remaining_bytes > 0:
+                if remaining_bytes > 0:
+                    left_size = self.get_file_size(remaining_bytes)
+                    left_text = f"... ({left_size} left)"
+                else:
+                    left_text = "... (remaining lines truncated)"
+                left_html = f'<div class="chatlog__text-preview-left">{left_text}</div>'
+            else:
+                left_html = ""
+                
+            return f'<div class="chatlog__text-preview-container"><pre class="chatlog__text-preview-pre"><code>{escaped_text}</code></pre>{left_html}</div>'
+        except Exception as e:
+            print(f"Error generating text preview: {e}")
+            return ""
+
     async def file(self):
         file_icon = await self.get_file_icon()
-
         file_size = self.get_file_size(self.attachments.size)
+        text_preview = await self.get_text_preview()
 
         self.attachments = await fill_out(self.guild, msg_attachment, [
             ("ATTACH_ICON", file_icon, PARSE_MODE_NONE),
             ("ATTACH_URL", self.attachments.proxy_url, PARSE_MODE_NONE),
             ("ATTACH_BYTES", str(file_size), PARSE_MODE_NONE),
-            ("ATTACH_FILE", str(self.attachments.filename), PARSE_MODE_NONE)
+            ("ATTACH_FILE", str(self.attachments.filename), PARSE_MODE_NONE),
+            ("TEXT_PREVIEW", text_preview, PARSE_MODE_NONE)
         ])
 
     @staticmethod

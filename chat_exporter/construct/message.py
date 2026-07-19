@@ -89,6 +89,10 @@ class MessageConstruct:
         self.message_created_at, self.message_edited_at = self.set_time()
         self.meta_data = meta_data
         self.forwarded = False
+        self.snapshot_content = ""
+        self.snapshot_embeds = ""
+        self.snapshot_attachments = ""
+        self.snapshot_components = ""
 
     def get_message_snapshots(self):
         if hasattr(self.message, "message_snapshots"):
@@ -207,21 +211,21 @@ class MessageConstruct:
             self.message_edited_at = _set_edit_at(self.message_edited_at)
 
         snapshots = self.get_message_snapshots()
+        combined = html.escape(self.message.content or "")
         if snapshots:
             snapshot_content = []
             for s in snapshots:
                 if hasattr(s, 'content') and s.content:
-                    snapshot_content.append(f'<div class="chatlog__markdown-preserve">{html.escape(s.content)}</div>')
+                    from chat_exporter.parse.markdown import ParseMarkdown
+                    escaped_content = html.escape(s.content)
+                    parsed_content = await ParseMarkdown(escaped_content).standard_message_flow()
+                    snapshot_content.append(f'<div class="chatlog__markdown-preserve">{parsed_content}</div>')
             
-            combined = html.escape(self.message.content or "")
-            if snapshot_content:
-                combined += f'<div class="chatlog__forwarded-snapshot">{"".join(snapshot_content)}</div>'
+            self.snapshot_content = "".join(snapshot_content)
             self.forwarded = True
-        else:
-            combined = html.escape(self.message.content or "")
 
         # Ensure content is at least an empty string to avoid rendering issues
-        self.message.content = await fill_out(self.guild, message_content, [
+        self.message_content_html = await fill_out(self.guild, message_content, [
             ("MESSAGE_CONTENT", combined, PARSE_MODE_MARKDOWN),
             ("EDIT", self.message_edited_at, PARSE_MODE_NONE),
         ], bot=self.bot)
@@ -257,12 +261,16 @@ class MessageConstruct:
             return interaction_message.interaction
 
         interaction_status = get_interaction_status(message)
-        if not interaction_status and (message.embeds or message.attachments):
+        snapshots = getattr(message, "message_snapshots", []) or getattr(message, "snapshots", [])
+        if snapshots:
+            icon = '<svg class="chatlog__reference-icon" aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12.92 2.89a1 1 0 0 1 1.3-.23l6.5 4.5a1 1 0 0 1 0 1.68l-6.5 4.5a1 1 0 0 1-1.57-.82v-2.34c-4.46.22-7.55 1.55-9.67 4.5a1 1 0 0 1-1.92-.47C1.4 8.7 5.75 4.5 12.15 4.04V2.05a1 1 0 0 1 .77-.96Z"></path></svg>'
+            dummy = "Forwarded message"
+        elif not interaction_status and (message.embeds or message.attachments):
             icon = DiscordUtils.reference_attachment_icon
-            dummy = "Click to see attachment"
+            dummy = "Attachment" if message.attachments else "Embed"
         elif interaction_status:
             icon = DiscordUtils.interaction_command_icon
-            dummy = "Click to see command"
+            dummy = ""
 
         if not message.content:
             message.content = dummy
@@ -347,7 +355,7 @@ class MessageConstruct:
                 f"https://cdn.jsdelivr.net/gh/mahtoid/DiscordUtils@master/stickers/{sticker.pack_id}/{sticker.id}.gif"
             )
 
-        self.message.content = await fill_out(self.guild, img_attachment, [
+        self.message_content_html = await fill_out(self.guild, img_attachment, [
             ("ATTACH_URL", str(sticker_image_url), PARSE_MODE_NONE),
             ("ATTACH_URL_THUMB", str(sticker_image_url), PARSE_MODE_NONE)
         ], bot=self.bot)
@@ -356,15 +364,24 @@ class MessageConstruct:
         if not self.bot or not hasattr(self.bot, "http") or not getattr(self.bot.http, "token", None):
             return None
         token = self.bot.http.token
-        url = f"https://discord.com/api/v10/channels/{self.message.channel.id}/messages/{self.message.id}"
-        headers = {"Authorization": f"{token}"}
+        url = f"https://discord.com/api/v10/channels/{self.message.channel.id}/messages?around={self.message.id}&limit=1"
+        headers = {
+            "Authorization": f"{token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+        }
 
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers, timeout=5) as resp:
                     if resp.status == 200:
-                        return await resp.json()
-        except Exception:
+                        data = await resp.json()
+                        if isinstance(data, list) and len(data) > 0:
+                            return data[0]
+                        return data
+                    else:
+                        print(f"DEBUG API ERROR: {resp.status} for {url} using token start {token[:5]}")
+        except Exception as e:
+            print(f"DEBUG FETCH ERROR: {e}")
             pass
         return None
 
@@ -402,14 +419,13 @@ class MessageConstruct:
                     self.attachments += await Attachment(sa,self.guild).flow()
                     self.message.reference = message_reference_forwarded
 
-        # DEEP FETCH FALLBACK for V2 Components missing from library object
-        components = self.message.components
-        if not components:
-            raw_data = await self._fetch_raw_message_data()
-            if raw_data and "components" in raw_data:
-                components = raw_data["components"]
+        if self.attachments:
+            self.attachments = f'<div class="chatlog__attachments-container">{self.attachments}</div>'
 
+        # Use the components preserved by our monkey-patch in discord_import.py
+        components = self.message.components
         if components:
+            print(f"DEBUG {self.message.id} components: {components}")
             for c in components:
                 self.components += await Component(c, self.guild, self.message.attachments).flow()
 
@@ -426,6 +442,16 @@ class MessageConstruct:
             self.reactions = f'<div class="chatlog__reactions">{self.reactions}</div>'
 
     async def build_message_template(self):
+        self.forwarded_html = ""
+        if self.forwarded:
+            inner_html = self.snapshot_content + self.attachments + self.embeds + self.components
+            if inner_html:
+                self.forwarded_html = self.message.reference + f'<div class="chatlog__forwarded-snapshot">{inner_html}</div>'
+            self.message.reference = ""
+            self.attachments = ""
+            self.embeds = ""
+            self.components = ""
+
         started = await self.generate_message_divider()
 
         if started:
@@ -433,7 +459,8 @@ class MessageConstruct:
 
         self.message_html += await fill_out(self.guild, message_body, [
             ("MESSAGE_ID", str(self.message.id)),
-            ("MESSAGE_CONTENT", self.message.content, PARSE_MODE_NONE),
+            ("MESSAGE_CONTENT", self.message_content_html, PARSE_MODE_NONE),
+            ("FORWARDED_SNAPSHOT", self.forwarded_html, PARSE_MODE_NONE),
             ("EMBEDS", self.embeds, PARSE_MODE_NONE),
             ("ATTACHMENTS", self.attachments, PARSE_MODE_NONE),
             ("COMPONENTS", self.components, PARSE_MODE_NONE),
@@ -445,17 +472,58 @@ class MessageConstruct:
         return self.message_html
 
     def _generate_message_divider_check(self):
+        prev_type = getattr(self.previous_message.type, "value", self.previous_message.type) if self.previous_message else 0
+        
+        if self.previous_message is None:
+            return True
+            
+        # Check if calendar date changed
+        prev_time = self.previous_message.created_at
+        if not prev_time.tzinfo:
+            prev_time = timezone("UTC").localize(prev_time)
+        curr_time = self.message.created_at
+        if not curr_time.tzinfo:
+            curr_time = timezone("UTC").localize(curr_time)
+            
+        prev_local = prev_time.astimezone(timezone(self.pytz_timezone))
+        curr_local = curr_time.astimezone(timezone(self.pytz_timezone))
+        if prev_local.date() != curr_local.date():
+            return True
+
         return bool(
-            self.previous_message is None or self.message.reference != "" or
-            self.previous_message.type is not discord.MessageType.default or self.interaction != "" or
-            self.previous_message.author.id != self.message.author.id or self.message.webhook_id is not None or
-            self.message.created_at > (self.previous_message.created_at + timedelta(minutes=4))
+            (self.message.reference != "" and not self.forwarded) or
+            prev_type not in (0, 19) or 
+            self.interaction != "" or
+            self.previous_message.author.id != self.message.author.id or
+            getattr(self.message, "webhook_id", None) is not None or
+            self.message.created_at > (self.previous_message.created_at + timedelta(minutes=5))
         )
 
     async def generate_message_divider(self, channel_audit=False):
         if channel_audit or self._generate_message_divider_check():
+            show_date_divider = False
+            
+            curr_time = self.message.created_at
+            if not curr_time.tzinfo:
+                curr_time = timezone("UTC").localize(curr_time)
+            curr_local = curr_time.astimezone(timezone(self.pytz_timezone))
+
+            if self.previous_message is None:
+                show_date_divider = True
+            else:
+                prev_time = self.previous_message.created_at
+                if not prev_time.tzinfo:
+                    prev_time = timezone("UTC").localize(prev_time)
+                prev_local = prev_time.astimezone(timezone(self.pytz_timezone))
+                if prev_local.date() != curr_local.date():
+                    show_date_divider = True
+
             if self.previous_message is not None:
                 self.message_html += await fill_out(self.guild, end_message, [], bot=self.bot)
+
+            if show_date_divider and not channel_audit:
+                date_str = curr_local.strftime("%B %d, %Y")
+                self.message_html += f'<div class="chatlog__date-divider"><span class="chatlog__date-divider-text">{date_str}</span></div>'
 
             if channel_audit:
                 self.audit = True
@@ -491,7 +559,8 @@ class MessageConstruct:
                 ("TIMESTAMP", str(self.message_created_at)),
                 ("DEFAULT_TIMESTAMP", str(default_timestamp), PARSE_MODE_NONE),
                 ("MESSAGE_ID", str(self.message.id)),
-                ("MESSAGE_CONTENT", self.message.content, PARSE_MODE_NONE),
+                ("MESSAGE_CONTENT", self.message_content_html, PARSE_MODE_NONE),
+                ("FORWARDED_SNAPSHOT", getattr(self, "forwarded_html", ""), PARSE_MODE_NONE),
                 ("EMBEDS", self.embeds, PARSE_MODE_NONE),
                 ("ATTACHMENTS", self.attachments, PARSE_MODE_NONE),
                 ("COMPONENTS", self.components, PARSE_MODE_NONE),

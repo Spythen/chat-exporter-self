@@ -66,7 +66,8 @@ class TranscriptDAO:
             self.channel.guild,
             self.pytz_timezone,
             self.military_time,
-            self.attachment_handler
+            self.attachment_handler,
+            bot=self.bot
         )
         await self.export_transcript(message_html, meta_data)
         clear_cache()
@@ -82,20 +83,39 @@ class TranscriptDAO:
             guild_id = str(self.channel.guild.id)
         else:
             guild_icon = DiscordUtils.default_avatar
-            if isinstance(self.channel, discord.DMChannel):
-                guild_name = f"{self.channel.recipient.name} and {self.bot.user.name if self.bot else 'User'}"
-            elif isinstance(self.channel, discord.GroupChannel):
+            if self.channel.__class__.__name__ == "DMChannel":
+                guild_name = f"{self.channel.recipient.display_name} and {self.bot.user.name if self.bot else 'User'}"
+            elif self.channel.__class__.__name__ == "GroupChannel":
                 guild_name = self.channel.name or "Group Chat"
             else:
                 guild_name = "Direct Message"
             guild_id = "0"
 
-        if isinstance(self.channel, discord.DMChannel):
-            channel_name = f"{self.channel.recipient.name} and {self.bot.user.name if self.bot else 'User'}"
-        elif isinstance(self.channel, discord.GroupChannel):
-            channel_name = self.channel.name or "Group Chat"
+        if self.channel.__class__.__name__ == "DMChannel":
+            recipient_name = self.channel.recipient.display_name if hasattr(self.channel, "recipient") and self.channel.recipient else "User"
+            channel_name = f"{recipient_name}'s dm"
+            welcome_title = f"Welcome to {recipient_name}'s DMs Transcript!"
+            channel_subject_name = f"{recipient_name}'s dm"
+            
+            avatar_url = DiscordUtils.default_avatar
+            if hasattr(self.channel, "recipient") and self.channel.recipient and hasattr(self.channel.recipient, "display_avatar"):
+                avatar_url = str(self.channel.recipient.display_avatar)
+            channel_icon = f'<img class="panel__hashtag-icon" src="{avatar_url}" style="border-radius: 50%;"/>'
+            
+        elif self.channel.__class__.__name__ == "GroupChannel":
+            group_name = self.channel.name or "Group Chat"
+            channel_name = f"{group_name} group chat"
+            welcome_title = f"Welcome to {group_name}'s Group Chat Transcript!"
+            channel_subject_name = f"{group_name} group chat"
+            
+            icon_url = str(self.channel.icon) if hasattr(self.channel, "icon") and self.channel.icon else DiscordUtils.default_avatar
+            channel_icon = f'<img class="panel__hashtag-icon" src="{icon_url}" style="border-radius: 50%;"/>'
+            
         else:
             channel_name = getattr(self.channel, "name", "transcript")
+            welcome_title = f"Welcome to #{channel_name}!"
+            channel_subject_name = f"#{channel_name} channel"
+            channel_icon = '<img class="panel__hashtag-icon" src="https://cdn.jsdelivr.net/gh/mahtoid/DiscordUtils@master/discord-hashtag.svg"/>'
 
         timezone = pytz.timezone(self.pytz_timezone)
         if self.military_time:
@@ -152,6 +172,7 @@ class TranscriptDAO:
         subject = await fill_out(self.channel.guild, channel_subject, [
             ("LIMIT", limit, PARSE_MODE_NONE),
             ("CHANNEL_NAME", channel_name),
+            ("CHANNEL_SUBJECT_NAME", channel_subject_name, PARSE_MODE_NONE),
             ("RAW_CHANNEL_TOPIC", str(raw_channel_topic))
         ], bot=self.bot)
 
@@ -192,6 +213,8 @@ class TranscriptDAO:
             ("SD", sd, PARSE_MODE_NONE),
             ("SERVER_NAME_SAFE", f"{guild_name}", PARSE_MODE_HTML_SAFE),
             ("CHANNEL_NAME_SAFE", f"{html.escape(str(channel_name or 'Unknown Channel'))}", PARSE_MODE_HTML_SAFE),
+            ("WELCOME_TITLE", welcome_title, PARSE_MODE_NONE),
+            ("CHANNEL_ICON", channel_icon, PARSE_MODE_NONE),
         ], bot=self.bot)
 
 

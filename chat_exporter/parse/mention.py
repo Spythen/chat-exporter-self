@@ -51,9 +51,6 @@ class ParseMention:
         self.code_blocks_content = []
 
     async def flow(self):
-        # As requested: Replace backticks with nothing before processing
-        self.content = self.content.replace("`", "")
-        
         await self.escape_mentions()
         await self.escape_mentions()
         await self.unescape_mentions()
@@ -170,6 +167,13 @@ class ParseMention:
                     
                     if not member and self.bot:
                         member = self.bot.get_user(member_id)
+                        
+                    if not member and self.bot:
+                        try:
+                            member = await self.bot.fetch_user(member_id)
+                        except Exception as e:
+                            print(f"Error fetching user {member_id}: {e}")
+                            pass
                     
                     if member:
                         member_name = getattr(member, "display_name", None) or \

@@ -5,8 +5,31 @@ from chat_exporter.ext.emoji_convert import convert_emoji
 
 class ParseMarkdown:
     def __init__(self, content):
-        self.content = str(content if content is not None else "")
+        content = str(content if content is not None else "")
+        content = self.distribute_multiline_formatting(content)
+        self.content = content
         self.code_blocks_content = []
+
+    def distribute_multiline_formatting(self, content):
+        stripped = content.strip()
+        for symbol in ["***", "**", "*", "__", "~~"]:
+            if stripped.startswith(symbol) and stripped.endswith(symbol) and len(stripped) > len(symbol) * 2:
+                leading_whitespace = content[:len(content) - len(content.lstrip())]
+                trailing_whitespace = content[len(content.rstrip()):]
+                lines = stripped.split("\n")
+                new_lines = []
+                for line in lines:
+                    if line.strip():
+                        l = line.strip()
+                        if l.startswith(symbol):
+                            l = l[len(symbol):]
+                        if l.endswith(symbol):
+                            l = l[:-len(symbol)]
+                        new_lines.append(f"{symbol}{l}{symbol}")
+                    else:
+                        new_lines.append(line)
+                return leading_whitespace + "\n".join(new_lines) + trailing_whitespace
+        return content
 
 
     async def standard_message_flow(self):
@@ -25,6 +48,7 @@ class ParseMarkdown:
         await self.parse_emoji()
         self.reverse_code_block_markdown()
         self.content = self.content.replace("\n", "<br>")
+        self.clean_block_brs()
         return self.content
 
     async def special_embed_flow(self):
@@ -35,6 +59,7 @@ class ParseMarkdown:
         await self.parse_emoji()
         self.reverse_code_block_markdown()
         self.content = self.content.replace("\n", "<br>")
+        self.clean_block_brs()
         return self.content
 
     async def message_reference_flow(self):
@@ -46,6 +71,7 @@ class ParseMarkdown:
         await self.parse_emoji()
         self.reverse_code_block_markdown()
         self.content = self.content.replace("\n", "<br>")
+        self.clean_block_brs()
         return self.content
 
     async def special_emoji_flow(self):
@@ -55,21 +81,25 @@ class ParseMarkdown:
     def strip_preserve(self):
         self.content = re.sub(r"\n", " ", self.content)
 
+    def clean_block_brs(self):
+        self.content = re.sub(r'(</h[1-6]>)\s*(?:<br>\s*)+', r'\1', self.content)
+        self.content = re.sub(r'(?:<br>\s*)+(<h[1-6]>)', r'\1', self.content)
+
     async def parse_emoji(self):
         self.content = await convert_emoji(self.content)
 
     def parse_normal_markdown(self):
         holder = (
-            [r"\*\*\*(.*?)\*\*\*", '<strong><em>%s</em></strong>'],
-            [r"\*\*(.*?)\*\*", '<strong>%s</strong>'],
-            [r"\*(.*?)\*", '<em>%s</em>'],
-            [r"__(.*?)__", '<span style="text-decoration: underline">%s</span>'],
-            [r"(?<!\w)_(.*?)_(?!\w)", '<em>%s</em>'],
-            [r"~~(.*?)~~", '<span style="text-decoration: line-through">%s</span>'],
-            [r"(?:^|\n|<br>)((?:>\s*|>>>\s*|&gt;\s*|&gt;&gt;&gt;\s*)*)###\s+(.*?)(?=\r?\n|<br>|$)", r"\1<h3>\2</h3>"],
-            [r"(?:^|\n|<br>)((?:>\s*|>>>\s*|&gt;\s*|&gt;&gt;&gt;\s*)*)##\s+(.*?)(?=\r?\n|<br>|$)", r"\1<h2>\2</h2>"],
-            [r"(?:^|\n|<br>)((?:>\s*|>>>\s*|&gt;\s*|&gt;&gt;&gt;\s*)*)#\s+(.*?)(?=\r?\n|<br>|$)", r"\1<h1>\2</h1>"],
-            [r"^-#\s(.*?)\n", '<small>%s</small>'],
+            [r"\*\*\*(((?:(?!<br>).)*?))\*\*\*", '<strong><em>%s</em></strong>'],
+            [r"\*\*(((?:(?!<br>).)*?))\*\*", '<strong>%s</strong>'],
+            [r"\*(((?:(?!<br>).)*?))\*", '<em>%s</em>'],
+            [r"__(((?:(?!<br>).)*?))__", '<span style="text-decoration: underline">%s</span>'],
+            [r"(?<!\w)_(((?:(?!<br>).)*?))_(?!\w)", '<em>%s</em>'],
+            [r"~~(((?:(?!<br>).)*?))~~", '<span style="text-decoration: line-through">%s</span>'],
+            [r"(^|\n|<br>)((?:<[^>]+>)*)((?:>\s*|>>>\s*|&gt;\s*|&gt;&gt;&gt;\s*)*)###\s+(.*?)(?=\r?\n|<br>|$)", r"\1\2\3<h3>\4</h3>"],
+            [r"(^|\n|<br>)((?:<[^>]+>)*)((?:>\s*|>>>\s*|&gt;\s*|&gt;&gt;&gt;\s*)*)##\s+(.*?)(?=\r?\n|<br>|$)", r"\1\2\3<h2>\4</h2>"],
+            [r"(^|\n|<br>)((?:<[^>]+>)*)((?:>\s*|>>>\s*|&gt;\s*|&gt;&gt;&gt;\s*)*)#\s+(.*?)(?=\r?\n|<br>|$)", r"\1\2\3<h1>\4</h1>"],
+            [r"(^|\n|<br>)((?:<[^>]+>)*)((?:>\s*|>>>\s*|&gt;\s*|&gt;&gt;&gt;\s*)*)-#\s+(.*?)(?=\r?\n|<br>|$)", r"\1\2\3<span class='chatlog__markdown-subtext'><small>\4</small></span>"],
             [r"\|\|(.*?)\|\|", '<span class="spoiler spoiler--hidden" onclick="showSpoiler(event, this)"> <span '
                                'class="spoiler-text">%s</span></span>'],
         )
@@ -84,6 +114,17 @@ class ParseMarkdown:
                     affected_text = match.group(1)
                     self.content = self.content.replace(self.content[match.start():match.end()], r % affected_text)
                     match = re.search(pattern, self.content)
+
+        # Custom Discord Emojis
+        def replace_custom_emoji(match):
+            animated = match.group(1) == 'a'
+            name = match.group(2)
+            emoji_id = match.group(3)
+            ext = 'gif' if animated else 'png'
+            onerror = ' onerror="this.onerror=null; this.src=this.src.replace(\'.gif\', \'.png\');"' if animated else ''
+            return f'<img class="emoji emoji--small" src="https://cdn.discordapp.com/emojis/{emoji_id}.{ext}?size=64"{onerror} alt=":{name}:" title="{name}">'
+
+        self.content = re.sub(r"(?:<|&lt;)(a?):([a-zA-Z0-9_]+):([0-9]+)(?:>|&gt;)", replace_custom_emoji, self.content)
 
         # > quote (group consecutive lines into a single block so the bar spans them)
         self.content = self.merge_quote_lines(self.content)
@@ -126,7 +167,7 @@ class ParseMarkdown:
             else:
                 self.content = self.content.replace(
                     self.content[match.start():match.end()],
-                    '<span class="pre pre-inline">%s</span>' % f'%s{len(self.code_blocks_content)}'
+                    '<span class="pre pre--inline">%s</span>' % f'%s{len(self.code_blocks_content)}'
                 )
 
             match = re.search(pattern, self.content)
@@ -139,7 +180,7 @@ class ParseMarkdown:
             affected_text = self.return_to_markdown(affected_text)
             self.code_blocks_content.append(affected_text)
             self.content = self.content.replace(self.content[match.start():match.end()],
-                                                '<span class="pre pre-inline">%s</span>' % f'%s{len(self.code_blocks_content)}')
+                                                '<span class="pre pre--inline">%s</span>' % f'%s{len(self.code_blocks_content)}')
             match = re.search(pattern, self.content)
 
         # `code`
@@ -152,13 +193,13 @@ class ParseMarkdown:
             affected_text = self.return_to_markdown(affected_text)
             self.code_blocks_content.append(affected_text)
             self.content = self.content.replace(self.content[match.start():match.end()],
-                                                '<span class="pre pre-inline">%s</span>' % f'%s{len(self.code_blocks_content)}')
+                                                '<span class="pre pre--inline">%s</span>' % f'%s{len(self.code_blocks_content)}')
             match = re.search(pattern, self.content)
 
         self.content = re.sub(r"<br>", "\n", self.content)
 
     def reverse_code_block_markdown(self):
-        for x in range(len(self.code_blocks_content)):
+        for x in reversed(range(len(self.code_blocks_content))):
             self.content = self.content.replace(f'%s{x + 1}', self.code_blocks_content[x])
 
     def parse_embed_markdown(self):
