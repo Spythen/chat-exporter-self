@@ -33,8 +33,7 @@ def _patch_discord_components():
                 if component is not None:
                     self.components.append(component)
         discord.Message._handle_components = _new_handle_components
-        print("DEBUG:", discord.Message._handle_components)
-    except Exception as e:
-        print(f"DEBUG PATCH ERROR: {e}")
+    except Exception:
+        pass
 
 _patch_discord_components()

@@ -378,10 +378,7 @@ class MessageConstruct:
                         if isinstance(data, list) and len(data) > 0:
                             return data[0]
                         return data
-                    else:
-                        print(f"DEBUG API ERROR: {resp.status} for {url} using token start {token[:5]}")
-        except Exception as e:
-            print(f"DEBUG FETCH ERROR: {e}")
+        except Exception:
             pass
         return None
 
